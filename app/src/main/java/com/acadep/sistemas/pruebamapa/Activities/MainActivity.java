@@ -1,4 +1,4 @@
-package com.acadep.sistemas.pruebamapa;
+package com.acadep.sistemas.pruebamapa.Activities;
 
 
 import android.support.v4.app.Fragment;
@@ -6,9 +6,11 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.acadep.sistemas.pruebamapa.Fragment.MapsFragment;
 import com.acadep.sistemas.pruebamapa.Fragment.WelcomeFragment;
+import com.acadep.sistemas.pruebamapa.R;
 import com.google.android.gms.maps.MapFragment;
 
 public class MainActivity extends AppCompatActivity {
@@ -19,6 +21,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //Toast.makeText(this,"Called",Toast.LENGTH_SHORT).show();
+
+        //En caso de rotar el dispositivo
+        if(savedInstanceState==null){
+            currentFragment = new WelcomeFragment();
+            changeFragment(currentFragment);
+        }
+
     }
 
     @Override
@@ -42,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void changeFragment(Fragment fragment){
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,fragment).commit();
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container,fragment).commit();
     }
 }

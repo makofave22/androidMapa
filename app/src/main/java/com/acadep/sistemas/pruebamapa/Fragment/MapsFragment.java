@@ -24,10 +24,14 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.acadep.sistemas.pruebamapa.R;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 
@@ -39,9 +43,11 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, View.O
     private GoogleMap gMap;
     private FloatingActionButton fab;
 
-    private Location currentLocation;
+    private Location currentLocation,location;
     private LocationManager locationManager;
+    private Marker marker;
 
+    private CameraPosition cameraZoom;
     public MapsFragment() {
         // Required empty public constructor
     }
@@ -80,6 +86,17 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, View.O
         gMap = googleMap;
         locationStart();
 
+
+    }
+
+    private void zoomToLocation(Location location){
+        cameraZoom= new CameraPosition.Builder()
+                .target(new LatLng(location.getLatitude(),location.getLongitude()))
+                .zoom(15)//limit 21
+                .bearing(0)//0-365
+                .tilt(30)  //0-90
+                .build();  // 10 Ciudad  15 calle 20 edificio
+        gMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraZoom));
     }
 
     //codigo para activar el GPS
@@ -95,7 +112,7 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, View.O
                 && ActivityCompat.checkSelfPermission(getContext(),
                 Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(getActivity(),new String[]{Manifest.permission.ACCESS_FINE_LOCATION,},1000);
-            Toast.makeText(getContext(),"Failed!!!",Toast.LENGTH_LONG).show();
+            //Toast.makeText(getContext(),"Failed!!!",Toast.LENGTH_LONG).show();
             return;
         }
         //gMap.setMyLocationEnabled(true);
@@ -104,6 +121,43 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, View.O
         //
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 0,this);
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0,this);
+    }
+
+    private void locationStart(LocationManager locationManager1,Location location){
+        locationManager1=(LocationManager)getContext().getSystemService(Context.LOCATION_SERVICE);
+        final boolean gpsEnabled = locationManager1.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        if(!gpsEnabled){
+            Intent settingIntent= new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            startActivity(settingIntent);
+        }
+        if (ActivityCompat.checkSelfPermission(getContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(getContext(),
+                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(getActivity(),new String[]{Manifest.permission.ACCESS_FINE_LOCATION,},1000);
+            //Toast.makeText(getContext(),"Failed!!!",Toast.LENGTH_LONG).show();
+            return ;
+        }
+
+         location = locationManager1.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        if(location==null){
+            location= locationManager1.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        }
+        currentLocation=location;
+        if(currentLocation!=null){
+           createOrUpdateMarkerByLocation(location);
+           zoomToLocation(location);
+        }
+    }
+    private void createOrUpdateMarkerByLocation(Location location){
+
+        if(marker == null){
+            marker= gMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())).draggable(true));
+
+        }else{
+            marker.setPosition(new LatLng(location.getLatitude(),location.getLongitude()));
+        }
+
     }
     private boolean isGPSEnabled(){
         //activar el gps
@@ -139,6 +193,11 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, View.O
     public void onClick(View view) {
        if( !this.isGPSEnabled()){
            showInfoAlert();
+       }else{
+
+          locationStart(locationManager,location);
+
+
        }
     }
 
@@ -146,8 +205,7 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, View.O
     public void onLocationChanged(Location location) {
 
         Toast.makeText(getContext(),"Changed! ->"+ location.getProvider(),Toast.LENGTH_LONG).show();
-        //aqui agregamos marcadores
-        gMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())).draggable(true));
+        createOrUpdateMarkerByLocation(location);
     }
 
     @Override

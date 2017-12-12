@@ -1,51 +1,44 @@
 package com.acadep.sistemas.pruebamapa.Fragment;
 
 
-
+import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.location.Address;
-import android.location.Geocoder;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 
 import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.acadep.sistemas.pruebamapa.R;
-import com.google.android.gms.maps.CameraUpdate;
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
 
 
-public class MapsFragment extends Fragment implements OnMapReadyCallback, GoogleMap.OnMarkerDragListener,View.OnClickListener{
+public class MapsFragment extends Fragment implements OnMapReadyCallback, View.OnClickListener {
 
 
     private View rootView;
     private MapView mapView;
     private GoogleMap gMap;
-
-    private List<Address> addresses;
-    private Geocoder geocoder;
-
-    private MarkerOptions marker;
     private FloatingActionButton fab;
 
+    private Location currentLocation;
+    private LocationManager locationManager;
 
     public MapsFragment() {
         // Required empty public constructor
@@ -55,8 +48,8 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, Google
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        rootView= inflater.inflate(R.layout.fragment_maps, container, false);
-        fab= (FloatingActionButton)rootView.findViewById(R.id.fab);
+        rootView = inflater.inflate(R.layout.fragment_maps, container, false);
+        fab = (FloatingActionButton) rootView.findViewById(R.id.fab);
         fab.setOnClickListener(this);
         return rootView;
     }
@@ -64,14 +57,13 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, Google
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mapView=(MapView)rootView.findViewById(R.id.map);
-        if(mapView!=null){
+        mapView = (MapView) rootView.findViewById(R.id.map);
+        if (mapView != null) {
             //crear manualmente
             mapView.onCreate(null);
             mapView.onResume();
             mapView.getMapAsync(this);
         }
-
 
 
     }
@@ -83,46 +75,65 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, Google
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        gMap= googleMap;
+        gMap = googleMap;
+        locationManager=(LocationManager)getContext().getSystemService(Context.LOCATION_SERVICE);
 
-        LatLng place = new LatLng(37.3890924, -5.9844589);
+        if (ActivityCompat.checkSelfPermission(getContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(getContext(),
+                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            Toast.makeText(getContext(),"Failed!!!",Toast.LENGTH_LONG).show();
+            return;
+        }
+        gMap.setMyLocationEnabled(true);
+        gMap.getUiSettings().setMyLocationButtonEnabled(false);
 
-        CameraUpdate zoom= CameraUpdateFactory.zoomTo(15);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                Toast.makeText(getContext(),"Changed!",Toast.LENGTH_LONG).show();
+            }
 
-        marker= new MarkerOptions();
-        marker.position(place);
-        marker.title("Mi marcador");
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
 
-        marker.draggable(true);
-        marker.snippet("Esto es una caja de texto donde modificar los datos");
-        marker.icon(BitmapDescriptorFactory.fromResource(android.R.drawable.star_on));//aqui podemos poner la imagen que deseemos al marcador
-        gMap.addMarker(marker);
+            }
 
-        //gMap.addMarker(new MarkerOptions().position(place).title("Marker in Sevilla").draggable(true));//arrastrar el marcador y al soltarlo dame informacion
-        gMap.moveCamera(CameraUpdateFactory.newLatLng(place));
-        gMap.animateCamera(zoom);
+            @Override
+            public void onProviderEnabled(String s) {
 
-        //
-        gMap.setOnMarkerDragListener(this);
+            }
 
-        //geocoader nos dara informacion dependiendo de latitude y longitud
-        geocoder=new Geocoder(getContext(), Locale.getDefault());
+            @Override
+            public void onProviderDisabled(String s) {
 
-
-
+            }
+        });
 
     }
-    private void checkIfGPSIsEnable(){
+
+    private boolean isGPSEnabled(){
         //activar el gps
         try {
             int gpsSignal= Settings.Secure.getInt(getActivity().getContentResolver(),Settings.Secure.LOCATION_MODE);
 
             if(gpsSignal==0){
                 //No tenemos senal de gps
-                showInfoAlert();
+                return false;
+            }
+            else{
+                return true;
             }
         } catch (Settings.SettingNotFoundException e) {
             e.printStackTrace();
+            return false;
         }
     }
 
@@ -137,58 +148,11 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, Google
                     }
                 }).setNegativeButton("CANCEL",null).show();
     }
-    @Override
-    public void onMarkerDragStart(Marker marker) {
-
-        marker.hideInfoWindow();//cerramos el marcador cuando lo agarramos y arrastramos
-    }
-
-    @Override
-    public void onMarkerDrag(Marker marker) {
-
-    }
-
-    @Override
-    public void onMarkerDragEnd(Marker marker) {
-
-        double latitude = marker.getPosition().latitude;
-        double longitude= marker.getPosition().longitude;
-
-        //el numero maxResults es el numero maximo de localizaciones arecibir
-        try {
-            addresses = geocoder.getFromLocation(latitude,longitude,1);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String address = addresses.get(0).getAddressLine(0);
-        String city= addresses.get(0).getLocality();   //getLocality es para la ciudad
-        String state= addresses.get(0).getAdminArea(); //Es para el estado
-        String country= addresses.get(0).getCountryName();
-        String postalCode= addresses.get(0).getPostalCode();
-
-        marker.setSnippet("address: "+address+"\n"+
-                        "city: "+city+"\n"+
-                        "state: "+state+"\n"+
-                        "country: "+country+"\n"+
-                        "postalCode: "+postalCode+"\n");
-
-        marker.showInfoWindow();
-
-
-
-        /*Toast.makeText(getContext(), "address: "+address+"\n"+
-                        "city: "+city+"\n"+
-                        "state: "+state+"\n"+
-                        "country: "+country+"\n"+
-                        "postalCode: "+postalCode+"\n"
-                , Toast.LENGTH_SHORT).show();*/
-
-
-
-    }
 
     @Override
     public void onClick(View view) {
-        this.checkIfGPSIsEnable();
+       if( !this.isGPSEnabled()){
+           showInfoAlert();
+       }
     }
 }

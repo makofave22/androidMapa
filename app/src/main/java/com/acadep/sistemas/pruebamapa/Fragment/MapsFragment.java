@@ -27,9 +27,11 @@ import com.acadep.sistemas.pruebamapa.R;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 
-public class MapsFragment extends Fragment implements OnMapReadyCallback, View.OnClickListener {
+public class MapsFragment extends Fragment implements OnMapReadyCallback, View.OnClickListener, LocationListener{
 
 
     private View rootView;
@@ -96,31 +98,12 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, View.O
             Toast.makeText(getContext(),"Failed!!!",Toast.LENGTH_LONG).show();
             return;
         }
-        gMap.setMyLocationEnabled(true);
-        gMap.getUiSettings().setMyLocationButtonEnabled(false);
+        //gMap.setMyLocationEnabled(true);
+        //gMap.getUiSettings().setMyLocationButtonEnabled(false);
 
         //
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 0, new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                Toast.makeText(getContext(),"Changed!",Toast.LENGTH_LONG).show();
-            }
-
-            @Override
-            public void onStatusChanged(String s, int i, Bundle bundle) {
-
-            }
-
-            @Override
-            public void onProviderEnabled(String s) {
-
-            }
-
-            @Override
-            public void onProviderDisabled(String s) {
-
-            }
-        });
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 0,this);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0,this);
     }
     private boolean isGPSEnabled(){
         //activar el gps
@@ -157,5 +140,28 @@ public class MapsFragment extends Fragment implements OnMapReadyCallback, View.O
        if( !this.isGPSEnabled()){
            showInfoAlert();
        }
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+
+        Toast.makeText(getContext(),"Changed! ->"+ location.getProvider(),Toast.LENGTH_LONG).show();
+        //aqui agregamos marcadores
+        gMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())).draggable(true));
+    }
+
+    @Override
+    public void onStatusChanged(String s, int i, Bundle bundle) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String s) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String s) {
+
     }
 }
